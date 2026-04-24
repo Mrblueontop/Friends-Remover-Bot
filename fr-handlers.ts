@@ -96,7 +96,7 @@ async function replyError(
 async function requireVerified(
   interaction: ChatInputCommandInteraction | ButtonInteraction,
 ): Promise<FRVerifiedAccount | null> {
-  const account = getActiveAccount(interaction.user.id);
+  const account = await getActiveAccount(interaction.user.id);
   if (!account) {
     await replyError(
       interaction,
@@ -114,7 +114,7 @@ async function requireVerified(
 // ── /verify ───────────────────────────────────────────────────────────────────
 
 export async function handleFRVerify(interaction: ChatInputCommandInteraction): Promise<void> {
-  const discordUser = getFRDiscordUser(interaction.user.id);
+  const discordUser = await getFRDiscordUser(interaction.user.id);
   if (discordUser && discordUser.accounts.length >= 5) {
     await interaction.reply({
       embeds: [
@@ -167,7 +167,7 @@ export async function handleFRVerify(interaction: ChatInputCommandInteraction): 
 export async function handleFRSwitchAccount(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
-  const discordUser = getFRDiscordUser(interaction.user.id);
+  const discordUser = await getFRDiscordUser(interaction.user.id);
   if (!discordUser || discordUser.accounts.length === 0) {
     await replyError(interaction, "You have no linked accounts. Use `/verify` to add one.");
     return;
@@ -342,7 +342,7 @@ export async function handleFRPinView(interaction: ChatInputCommandInteraction):
 export async function handleFRNotificationsToggle(
   interaction: ChatInputCommandInteraction,
 ): Promise<void> {
-  const discordUser = getOrCreateFRDiscordUser(
+  const discordUser = await getOrCreateFRDiscordUser(
     interaction.user.id,
     interaction.user.username,
   );
@@ -385,7 +385,7 @@ export async function handleFRButton(interaction: ButtonInteraction): Promise<vo
 
   if (id.startsWith("fr:switch_account:")) {
     const idx = parseInt(id.split(":")[2] ?? "0", 10);
-    const discordUser = getFRDiscordUser(interaction.user.id);
+    const discordUser = await getFRDiscordUser(interaction.user.id);
     if (!discordUser || idx >= discordUser.accounts.length) {
       await interaction.update({
         embeds: [new EmbedBuilder().setDescription("❌ Account not found.").setColor(0xe74c3c)],
@@ -457,7 +457,7 @@ async function handleFRVerifyCheck(interaction: ButtonInteraction): Promise<void
 
   // ── Bio confirmed — link the account ────────────────────────────────────────
 
-  const discordUser = getOrCreateFRDiscordUser(interaction.user.id, interaction.user.username);
+  const discordUser = await getOrCreateFRDiscordUser(interaction.user.id, interaction.user.username);
   const alreadyLinked = discordUser.accounts.some(
     (a) => a.robloxUserId === session.robloxUserId,
   );
@@ -531,7 +531,7 @@ type NotifPrefKey = typeof NOTIF_PREF_KEYS[number];
 
 async function handleFRNotifToggle(interaction: ButtonInteraction): Promise<void> {
   const key    = interaction.customId.split(":")[2] as NotifPrefKey | undefined;
-  const discordUser = getFRDiscordUser(interaction.user.id);
+  const discordUser = await getFRDiscordUser(interaction.user.id);
 
   if (!key || !discordUser || !(key in discordUser.notificationPrefs)) {
     await interaction.deferUpdate();
@@ -578,7 +578,7 @@ export async function handleFRDMMessage(
   }
 
   // Check not already linked by this Discord user
-  const existing = getFRDiscordUser(discordId);
+  const existing = await getFRDiscordUser(discordId);
   if (existing?.accounts.some((a) => a.robloxUserId === String(robloxUser.id))) {
     await sendFRVerifyFailed(
       dm,
