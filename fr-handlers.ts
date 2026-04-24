@@ -185,7 +185,7 @@ export async function handleFRSwitchAccount(
       return;
     }
     discordUser.activeAccountIndex = idx;
-    setFRDiscordUser(discordUser);
+    await setFRDiscordUser(discordUser);
     const acc = discordUser.accounts[idx]!;
     await interaction.reply({
       embeds: [
@@ -471,7 +471,7 @@ async function handleFRVerifyCheck(interaction: ButtonInteraction): Promise<void
     };
     discordUser.accounts.push(newAccount);
     discordUser.activeAccountIndex = discordUser.accounts.length - 1;
-    setFRDiscordUser(discordUser);
+    await setFRDiscordUser(discordUser);
   }
 
   clearFRVerifySession(interaction.user.id);
@@ -540,7 +540,7 @@ async function handleFRNotifToggle(interaction: ButtonInteraction): Promise<void
 
   (discordUser.notificationPrefs as unknown as Record<string, boolean>)[key] =
     !(discordUser.notificationPrefs as unknown as Record<string, boolean>)[key];
-  setFRDiscordUser(discordUser);
+  await setFRDiscordUser(discordUser);
 
   const embed = buildNotifSettingsEmbed(discordUser.notificationPrefs);
   const row   = buildNotifSettingsRow(discordUser.notificationPrefs);
