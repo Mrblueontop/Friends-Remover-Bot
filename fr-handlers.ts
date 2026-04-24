@@ -394,7 +394,13 @@ export async function handleFRButton(interaction: ButtonInteraction): Promise<vo
       return;
     }
     discordUser.activeAccountIndex = idx;
-    setFRDiscordUser(discordUser);
+    console.log(`[FR SWITCH BTN] discordId=${interaction.user.id} switching to idx=${idx}`);
+    try {
+      await setFRDiscordUser(discordUser);
+      console.log(`[FR SWITCH BTN] setFRDiscordUser ok`);
+    } catch (err) {
+      console.error(`[FR SWITCH BTN] setFRDiscordUser THREW:`, err);
+    }
     const acc = discordUser.accounts[idx]!;
     await interaction.update({
       embeds: [
@@ -432,10 +438,14 @@ export async function handleFRButton(interaction: ButtonInteraction): Promise<vo
 // ── Bio verify check ──────────────────────────────────────────────────────────
 
 async function handleFRVerifyCheck(interaction: ButtonInteraction): Promise<void> {
+  const tag = `[FR VERIFY] discordId=${interaction.user.id}`;
+  console.log(`${tag} verify button clicked`);
+
   await interaction.deferUpdate();
   const session = getFRVerifySession(interaction.user.id);
 
   if (!session || session.step !== "awaiting_bio_verify") {
+    console.warn(`${tag} no active session or wrong step — session=${JSON.stringify(session)}`);
     await interaction.followUp({
       embeds: [new EmbedBuilder().setDescription("❌ No active verification session found.").setColor(0xe74c3c)],
       ephemeral: true,
@@ -443,8 +453,13 @@ async function handleFRVerifyCheck(interaction: ButtonInteraction): Promise<void
     return;
   }
 
+  console.log(`${tag} session ok — robloxUserId=${session.robloxUserId} robloxUsername=${session.robloxUsername} code=${session.verificationCode}`);
+
   const bio = await getUserBio(parseInt(session.robloxUserId!, 10));
+  console.log(`${tag} bio fetched — contains code: ${bio.includes(session.verificationCode!)}`);
+
   if (!bio.includes(session.verificationCode!)) {
+    console.warn(`${tag} bio check failed`);
     const dm = await interaction.user.createDM().catch(() => null);
     if (dm) {
       await sendFRVerifyFailed(
@@ -456,11 +471,15 @@ async function handleFRVerifyCheck(interaction: ButtonInteraction): Promise<void
   }
 
   // ── Bio confirmed — link the account ────────────────────────────────────────
+  console.log(`${tag} bio confirmed — fetching/creating discord user`);
 
   const discordUser = await getOrCreateFRDiscordUser(interaction.user.id, interaction.user.username);
+  console.log(`${tag} discordUser loaded — accounts.length=${discordUser.accounts.length}`);
+
   const alreadyLinked = discordUser.accounts.some(
     (a) => a.robloxUserId === session.robloxUserId,
   );
+  console.log(`${tag} alreadyLinked=${alreadyLinked}`);
 
   if (!alreadyLinked) {
     const newAccount: FRVerifiedAccount = {
@@ -471,10 +490,19 @@ async function handleFRVerifyCheck(interaction: ButtonInteraction): Promise<void
     };
     discordUser.accounts.push(newAccount);
     discordUser.activeAccountIndex = discordUser.accounts.length - 1;
-    await setFRDiscordUser(discordUser);
+    console.log(`${tag} calling setFRDiscordUser — accounts.length=${discordUser.accounts.length} activeIndex=${discordUser.activeAccountIndex}`);
+    try {
+      await setFRDiscordUser(discordUser);
+      console.log(`${tag} setFRDiscordUser completed successfully`);
+    } catch (err) {
+      console.error(`${tag} setFRDiscordUser THREW:`, err);
+    }
+  } else {
+    console.log(`${tag} skipping setFRDiscordUser — account already linked`);
   }
 
   clearFRVerifySession(interaction.user.id);
+  console.log(`${tag} session cleared`);
 
   await interaction.editReply({
     embeds: [
@@ -489,6 +517,7 @@ async function handleFRVerifyCheck(interaction: ButtonInteraction): Promise<void
   if (dm) {
     await sendFRVerifySuccess(dm, discordUser.accounts.at(-1)!);
   }
+  console.log(`${tag} ✅ verify flow complete`);
 }
 
 // ── Paginated history / pin nav ───────────────────────────────────────────────
