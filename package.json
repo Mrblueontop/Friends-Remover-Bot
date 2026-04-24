@@ -1,0 +1,23 @@
+{
+  "name": "friends-remover-bot",
+  "version": "1.0.0",
+  "description": "Friends Remover X — Discord Bot",
+  "main": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx watch index.ts"
+  },
+  "dependencies": {
+    "discord.js": "^14.15.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "tsx": "^4.15.0",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
