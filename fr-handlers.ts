@@ -291,9 +291,24 @@ export async function handleFRPinView(interaction: ChatInputCommandInteraction):
 
   let rawPins: FRPinEntry[] = [];
   try {
-    const data = (await frGet("/pins", account.robloxUserId)) as FRPinEntry[] | string;
-    rawPins = typeof data === "string" ? JSON.parse(data) : data;
-    if (!Array.isArray(rawPins)) rawPins = [];
+    const data = (await frGet("/pins", account.robloxUserId)) as unknown;
+    const parsed = typeof data === "string" ? JSON.parse(data as string) : data;
+    if (!Array.isArray(parsed)) {
+      rawPins = [];
+    } else {
+      // Pins are stored as a plain array of Roblox user IDs (numbers or strings).
+      rawPins = (parsed as unknown[]).map((item) => {
+        if (typeof item === "number" || typeof item === "string") {
+          return { userId: String(item) } as FRPinEntry;
+        }
+        const e = item as Record<string, unknown>;
+        return {
+          userId:      String(e.userId ?? e.id ?? ""),
+          username:    typeof e.username === "string" ? e.username : undefined,
+          displayName: typeof e.displayName === "string" ? e.displayName : undefined,
+        } as FRPinEntry;
+      }).filter((e) => e.userId && e.userId !== "undefined");
+    }
   } catch {
     await interaction.editReply({
       embeds: [new EmbedBuilder().setDescription("❌ Failed to fetch your pins. Try again later.").setColor(0xe74c3c)],
