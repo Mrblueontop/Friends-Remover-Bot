@@ -236,8 +236,18 @@ export async function handleFRHistoryView(interaction: ChatInputCommandInteracti
   let rawHistory: FRHistoryEntry[] = [];
   try {
     const data = (await frGet("/history", account.robloxUserId)) as FRHistoryEntry[] | string;
-    rawHistory = typeof data === "string" ? JSON.parse(data) : data;
-    if (!Array.isArray(rawHistory)) rawHistory = [];
+    const parsed = typeof data === "string" ? JSON.parse(data) : data;
+    if (!Array.isArray(parsed)) { rawHistory = []; } else {
+      // Normalize: extension stores removed person's id in `id` and name in `name`.
+      // FRHistoryEntry expects `userId` and `username`.
+      rawHistory = parsed.map((e: Record<string, unknown>) => ({
+        userId:      String(e.id      ?? e.userId ?? ""),
+        username:    String(e.name    ?? e.username ?? "Unknown"),
+        displayName: String(e.displayName ?? e.name ?? e.username ?? ""),
+        timestamp:   typeof e.timestamp === "number" ? e.timestamp : undefined,
+        removedBy:   typeof e.unfriendedBy === "string" ? e.unfriendedBy : undefined,
+      }));
+    }
   } catch {
     await interaction.editReply({
       embeds: [new EmbedBuilder().setDescription("❌ Failed to fetch your history. Try again later.").setColor(0xe74c3c)],
